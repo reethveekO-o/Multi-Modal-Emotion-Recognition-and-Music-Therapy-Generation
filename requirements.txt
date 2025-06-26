@@ -1,0 +1,11 @@
+numpy
+sounddevice
+soundfile
+librosa
+noisereduce
+tensorflow
+keyboard
+matplotlib
+whisper
+torch==2.7.1
+transformers
