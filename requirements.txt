@@ -10,3 +10,5 @@ openai-whisper==20240930
 torch==2.7.1
 transformers
 #these are only for the audio + text code aka main.py
+xgboost
+praat-parselmouth
