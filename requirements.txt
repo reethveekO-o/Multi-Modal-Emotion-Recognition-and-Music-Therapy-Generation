@@ -8,5 +8,5 @@ keyboard==0.13.5
 matplotlib==3.10.3
 openai-whisper==20240930
 torch==2.7.1
-transformers==4.52.4
+transformer
 #python 3.10.0
