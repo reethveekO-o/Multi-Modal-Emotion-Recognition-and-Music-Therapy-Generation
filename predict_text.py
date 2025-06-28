@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 
 # Model path
-model_path = r"C:\Users\rithvik\OneDrive\Desktop\CCBD CDSAML\models\best_bert_finetuned_model"
+model_path = r"C:\Users\vinit\OneDrive\Desktop\College\Research June-July\Multi-Modal-Emotion-Recognition-and-Music-Therapy-Generation\models\text_model"
 
 # Load model and tokenizer
 tokenizer = BertTokenizer.from_pretrained(model_path)

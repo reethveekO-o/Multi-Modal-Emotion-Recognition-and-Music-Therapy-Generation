@@ -18,8 +18,8 @@ import os
 SAMPLE_RATE = 16000
 RAW_FILENAME = "live_audio.wav"
 PROCESSED_FILENAME = "live_audio_preprocessed.wav"
-AUDIO_MODEL_PATH = r"C:\Users\rithvik\OneDrive\Desktop\CCBD CDSAML\models\audio_model.h5"
-TEXT_MODEL_PATH = r"C:\Users\rithvik\OneDrive\Desktop\CCBD CDSAML\models\best_bert_finetuned_model"
+AUDIO_MODEL_PATH = r"C:\Users\vinit\OneDrive\Desktop\College\Research June-July\Multi-Modal-Emotion-Recognition-and-Music-Therapy-Generation\models\audio_model.h5"
+TEXT_MODEL_PATH = r"C:\Users\vinit\OneDrive\Desktop\College\Research June-July\Multi-Modal-Emotion-Recognition-and-Music-Therapy-Generation\models\text_model"
 MAX_LENGTH = 126
 
 # === Emotion Labels ===
