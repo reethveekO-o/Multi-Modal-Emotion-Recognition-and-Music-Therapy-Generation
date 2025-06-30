@@ -9,6 +9,7 @@ matplotlib==3.10.3
 faster-whisper
 torch==2.7.1
 transformers
-#these are only for the audio + text code aka main.py
 xgboost
 praat-parselmouth
+opencv-python
+tqdm
