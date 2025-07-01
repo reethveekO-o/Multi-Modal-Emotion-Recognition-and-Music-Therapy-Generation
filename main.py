@@ -68,7 +68,7 @@ emotion_mapping = {
     ('happy', 'high'): 'Excitement', ('happy', 'mid'): 'Happiness', ('happy', 'low'): 'Contentment'
 }
 
-def reduce_to_video_labels(emotion):
+"""def reduce_to_video_labels(emotion):
     mapping = {
         'Rage': 'angry', 'Anger': 'angry', 'Irritation': 'angry',
         'Despair': 'sad', 'Sadness': 'sad', 'Melancholy': 'sad',
@@ -78,7 +78,7 @@ def reduce_to_video_labels(emotion):
         'Shock': 'surprise', 'Surprise': 'surprise', 'Curiosity': 'surprise',
         'Sarcasm/Irony': 'neutral'
     }
-    return mapping.get(emotion, 'neutral')
+    return mapping.get(emotion, 'neutral')"""
 # ======= FOCAL LOSS DEFINITION =======
 class FocalLoss(tf.keras.losses.Loss):
     def __init__(self, alpha=1.0, gamma=2.0, **kwargs):
@@ -369,9 +369,8 @@ class EmotionAnalyzer:
                 reason = "Low text confidence, using audio"
 
         refined_emotion = emotion_mapping.get((base_emotion.lower(), intensity), base_emotion.title())
-        reduced_emotion = reduce_to_video_labels(refined_emotion)
-        return reduced_emotion, confidence, auth_score, False, reason
-
+        return refined_emotion, confidence, auth_score, False, reason
+    
 # =================== MAIN EXECUTION ===================
 if __name__ == '__main__':
     print("===== FULL MULTIMODAL PIPELINE READY =====")
