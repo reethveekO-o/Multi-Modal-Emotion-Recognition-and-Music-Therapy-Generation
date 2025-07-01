@@ -2,7 +2,7 @@
 Enhanced Multimodal Emotion Recognition System - Text Prioritized Version
 Fixes audio dominance issue by giving proper weight to high-confidence text predictions
 """
-
+import argparse
 import numpy as np
 import sounddevice as sd
 import soundfile as sf
@@ -28,9 +28,12 @@ from xgboost import XGBClassifier
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 # ====================== CONSTANTS ======================
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+SESSION_FOLDER = os.path.join(BASE_DIR, "RecordedSession")
+os.makedirs(SESSION_FOLDER, exist_ok=True)
+RAW_FILENAME = os.path.join(SESSION_FOLDER, "output_audio.wav")
+PROC_FILENAME = RAW_FILENAME  # Since preprocessing replaces in-place for consistency
 SAMPLE_RATE = 16000
-RAW_FILENAME = "live_audio.wav"
-PROC_FILENAME = "live_audio_preprocessed.wav"
 AUDIO_MODEL_PATH = "models/audio_model.h5"
 TEXT_MODEL_PATH = "models/text_model"
 AUTH_MODEL_PATH = "models/authenticity_xgb.pkl"
@@ -45,6 +48,9 @@ AUDIO_EMOTIONS = {
 
 # Speaker-specific intensity history
 speaker_history = []
+parser = argparse.ArgumentParser()
+parser.add_argument("--file", type=str, help="Path to audio file for analysis")
+args = parser.parse_args()
 
 # ====================== HELPER FUNCTIONS ======================
 def extract_voice_quality(audio_path):
@@ -203,17 +209,15 @@ def record_audio():
     return RAW_FILENAME
 
 def preprocess_audio(audio_path):
-    """Normalize and reduce noise in audio"""
+    """Preprocess audio by reducing noise only (no normalization)"""
     y, sr = librosa.load(audio_path, sr=SAMPLE_RATE)
-    y = librosa.util.normalize(y)
     y = nr.reduce_noise(y=y, sr=sr, prop_decrease=0.15)
     sf.write(PROC_FILENAME, y, sr)
     return PROC_FILENAME
 
 def extract_audio_features(audio_path):
-    """Extract MFCC, Mel, and Chroma features"""
+    """Extract MFCC, Mel, and Chroma features without normalization"""
     y, sr = librosa.load(audio_path, sr=SAMPLE_RATE)
-    y = librosa.util.normalize(y)
     
     mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=40)
     mel = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=128)
@@ -385,12 +389,23 @@ def text_prioritized_fusion(text_emotion, audio_emotion, text_conf, audio_conf,
 def analyze_emotion():
     """Main pipeline for emotion analysis"""
     # Record and preprocess audio
-    raw_path = record_audio()
+    if args.file:
+        print(f"🔹 Using provided audio file: {args.file}")
+        raw_path = args.file
+    else:
+        raw_path = record_audio()
+
     proc_path = preprocess_audio(raw_path)
+
     
     # Transcribe audio
     segments, _ = whisper_model.transcribe(proc_path)
     transcription = ' '.join(segment.text for segment in segments).strip() or "..."
+    # Save transcript for pipeline consistency
+    with open(os.path.join(SESSION_FOLDER, "final_output.txt"), "w", encoding="utf-8") as f:
+        f.write(transcription)
+    print(f"✅ Saved transcription to RecordedSession/final_output.txt")
+
     print("\n📜 Transcription:", transcription)
     
     # Get predictions
@@ -408,11 +423,13 @@ def analyze_emotion():
     )
     
     # Display results
+# === (imports and other code remain unchanged) ===
+
+# Replace your final print block in `analyze_emotion()` with this:
     print(f"\n🧠 Text Emotion: {text_em} ({text_conf:.2f}%)")
     print(f"🎧 Audio Emotion: {audio_em} ({audio_conf:.2f}%)")
     print(f"🔊 Intensity: {intensity} (RMS: {rms:.4f})")
     print(f"🔍 Authenticity Score: {auth_score:.2f}")
-    print(f"🎯 Final Emotion: {final_emotion} ({final_conf:.2f}%)")
     print(f"💡 Reasoning: {reason}")
     
     if disagreement:
@@ -423,26 +440,34 @@ def analyze_emotion():
         print("😊 Positive language detected")
     if detect_negative_language(transcription):
         print("😢 Negative language detected")
+    
+    # 👇 Clean final parseable result for pipeline
+    print(f"Emotion: {final_emotion} ({final_conf:.2f}%)")
+
 
 # ====================== MAIN LOOP ======================
 if __name__ == '__main__':
-    print("===== Text-Prioritized Emotion Recognition System =====")
-    print("Type 'rec' to start recording or 'exit' to quit")
-    
-    while True:
-        command = input("\n>>> ").strip().lower()
+    if args.file:
+        print("===== Running Emotion Analysis on Provided File =====")
+        analyze_emotion()
+    else:
+        print("===== Text-Prioritized Emotion Recognition System =====")
+        print("Type 'rec' to start recording or 'exit' to quit")
         
-        if command == 'exit':
-            print("Exiting...")
-            break
+        while True:
+            command = input("\n>>> ").strip().lower()
             
-        elif command == 'rec':
-            print("Starting emotion analysis...")
-            try:
-                analyze_emotion()
-            except Exception as e:
-                print(f"Error: {e}")
-                speaker_history.clear()
+            if command == 'exit':
+                print("Exiting...")
+                break
                 
-        else:
-            print("Invalid command. Type 'rec' or 'exit'")
+            elif command == 'rec':
+                print("Starting emotion analysis...")
+                try:
+                    analyze_emotion()
+                except Exception as e:
+                    print(f"Error: {e}")
+                    speaker_history.clear()
+                    
+            else:
+                print("Invalid command. Type 'rec' or 'exit'")

@@ -6,9 +6,10 @@ noisereduce==3.0.3
 tensorflow==2.19.0
 keyboard==0.13.5
 matplotlib==3.10.3
-openai-whisper==20240930
+faster-whisper
 torch==2.7.1
 transformers
-#these are only for the audio + text code aka main.py
 xgboost
 praat-parselmouth
+opencv-python
+tqdm
