@@ -1,4 +1,4 @@
-# =================== FULL MULTIMODAL EMOTION RECOGNITION PIPELINE ===================
+# =================== FULL MULTIMODAL EMOTION RECOGNITION PIPELINE (AUTH REMOVED) ===================
 
 import os
 import numpy as np
@@ -14,7 +14,6 @@ import time
 import threading
 import subprocess
 import cv2
-import pickle
 from scipy.stats import entropy
 from transformers import BertTokenizer, BertForSequenceClassification
 import torch.nn.functional as F
@@ -43,7 +42,6 @@ MAX_LENGTH = 126
 AUDIO_MODEL_PATH = "models/audio_model.h5"
 TEXT_MODEL_PATH = "models/text_model"
 VIDEO_MODEL_PATH = "models/video_model.h5"
-AUTH_MODEL_PATH = "models/auth_model.pkl"
 
 TEXT_EMOTIONS = ['sadness', 'joy', 'love', 'anger', 'fear', 'surprise']
 AUDIO_EMOTIONS = {
@@ -52,9 +50,9 @@ AUDIO_EMOTIONS = {
 }
 VIDEO_EMOTIONS = ['angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral']
 
-threatening_patterns = re.compile(r'\b(kill|murder|hurt|harm|attack|destroy|beat|punch|hit|die|death|dead|violence|violent|hate|revenge)\b', re.IGNORECASE)
-positive_patterns = re.compile(r'\b(love|like|happy|joy|wonderful|great|amazing|fantastic|good|nice|beautiful|awesome|excellent|perfect|thanks|thank you|grateful|appreciate)\b', re.IGNORECASE)
-negative_patterns = re.compile(r'\b(sad|tired|sick|deaths|disheartens|depressed|awful|terrible|horrible|hate|disgusted|angry|furious|scared|afraid|worried|anxious)\b', re.IGNORECASE)
+threatening_patterns = re.compile(r'\\b(kill|murder|hurt|harm|attack|destroy|beat|punch|hit|die|death|dead|violence|violent|hate|revenge)\\b', re.IGNORECASE)
+positive_patterns = re.compile(r'\\b(love|like|happy|joy|wonderful|great|amazing|fantastic|good|nice|beautiful|awesome|excellent|perfect|thanks|thank you|grateful|appreciate)\\b', re.IGNORECASE)
+negative_patterns = re.compile(r'\\b(sad|tired|sick|deaths|disheartens|depressed|awful|terrible|horrible|hate|disgusted|angry|furious|scared|afraid|worried|anxious)\\b', re.IGNORECASE)
 
 emotion_mapping = {
     ('anger', 'high'): 'Rage', ('anger', 'mid'): 'Anger', ('anger', 'low'): 'Irritation',
@@ -68,17 +66,6 @@ emotion_mapping = {
     ('happy', 'high'): 'Excitement', ('happy', 'mid'): 'Happiness', ('happy', 'low'): 'Contentment'
 }
 
-"""def reduce_to_video_labels(emotion):
-    mapping = {
-        'Rage': 'angry', 'Anger': 'angry', 'Irritation': 'angry',
-        'Despair': 'sad', 'Sadness': 'sad', 'Melancholy': 'sad',
-        'Excitement': 'happy', 'Happiness': 'happy', 'Contentment': 'happy',
-        'Panic': 'fear', 'Fear': 'fear', 'Anxiety': 'fear',
-        'Passion': 'happy', 'Love': 'happy', 'Warmth': 'happy',
-        'Shock': 'surprise', 'Surprise': 'surprise', 'Curiosity': 'surprise',
-        'Sarcasm/Irony': 'neutral'
-    }
-    return mapping.get(emotion, 'neutral')"""
 # ======= FOCAL LOSS DEFINITION =======
 class FocalLoss(tf.keras.losses.Loss):
     def __init__(self, alpha=1.0, gamma=2.0, **kwargs):
@@ -96,7 +83,6 @@ class FocalLoss(tf.keras.losses.Loss):
         focal_weight = self.alpha * tf.pow((1 - p_t), self.gamma)
         focal_loss = focal_weight * cross_entropy
         return tf.reduce_mean(tf.reduce_sum(focal_loss, axis=1))
-
 # =================== RECORD AUDIO + VIDEO ===================
 def record_audio_video():
     recording = True
@@ -171,19 +157,6 @@ class EmotionAnalyzer:
         self.video_model = load_model(VIDEO_MODEL_PATH)
         self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
         self.speaker_history = []
-        self.auth_model = self.load_or_create_auth_model()
-
-    def load_or_create_auth_model(self):
-        if os.path.exists(AUTH_MODEL_PATH):
-            try:
-                with open(AUTH_MODEL_PATH, "rb") as f:
-                    return pickle.load(f)
-            except:
-                pass
-        class DummyModel:
-            def predict_proba(self, X):
-                return np.array([[0.5, 0.5]])
-        return DummyModel()
 
     def transcribe_audio(self):
         segments, _ = self.whisper_model.transcribe(PROC_AUDIO_FILE)
@@ -309,11 +282,6 @@ class EmotionAnalyzer:
         audio_certainty = self.calculate_confidence_entropy(audio_probs)
         voice_features = self.extract_voice_quality(PROC_AUDIO_FILE)
 
-        try:
-            auth_score = self.auth_model.predict_proba([voice_features])[0][1]
-        except:
-            auth_score = 0.5
-
         is_threat = bool(threatening_patterns.search(transcription))
         is_pos = bool(positive_patterns.search(transcription))
         is_neg = bool(negative_patterns.search(transcription))
@@ -331,27 +299,14 @@ class EmotionAnalyzer:
             base_emotion = text_emotion
             confidence = text_conf
             reason = "Text confidence + language pattern match"
-        elif is_threat and audio_emotion in pos_emotions:
-            if auth_score < 0.4:
-                return 'Sarcasm/Irony', 80, auth_score, True, "Threatening + positive audio + low authenticity (sarcasm)"
-            elif auth_score > 0.6:
-                base_emotion = 'anger'
-                confidence = max(text_conf, audio_conf)
-                reason = "Authentic threatening content"
-            else:
-                base_emotion = text_emotion
-                confidence = text_conf
-                reason = "Threatening with medium authenticity"
+            
         elif text_category != audio_category and text_category != 'neutral' and audio_category != 'neutral':
             confidence_diff = abs(text_conf - audio_conf)
             if text_conf > 80.0 and confidence_diff > 15:
                 base_emotion = text_emotion
                 confidence = text_conf
                 reason = "Text dominance on disagreement"
-            elif auth_score > 0.6 and audio_category == 'negative':
-                base_emotion = audio_emotion
-                confidence = audio_conf
-                reason = "Authentic negative audio"
+
             else:
                 base_emotion = text_emotion
                 confidence = text_conf * 0.7 + audio_conf * 0.3
@@ -369,7 +324,7 @@ class EmotionAnalyzer:
                 reason = "Low text confidence, using audio"
 
         refined_emotion = emotion_mapping.get((base_emotion.lower(), intensity), base_emotion.title())
-        return refined_emotion, confidence, auth_score, False, reason
+        return refined_emotion, confidence, False, reason
     
 # =================== MAIN EXECUTION ===================
 if __name__ == '__main__':
@@ -398,7 +353,7 @@ if __name__ == '__main__':
             intensity = analyzer.calculate_adaptive_intensity(rms_value)
 
             print("🎛️ Fusing audio and text...")
-            fused_emotion, fused_conf, auth_score, disagreement, reason = analyzer.text_prioritized_fusion(
+            fused_emotion, fused_conf, disagreement, reason = analyzer.text_prioritized_fusion(
                 text_em, audio_em, text_conf, audio_conf, text_probs, audio_probs, intensity, transcription
             )
 
@@ -420,7 +375,6 @@ if __name__ == '__main__':
             print(f"Video: {video_emotion} ({video_conf:.1f}%)")
             print(f"✅ Final Fused Emotion: {final_emotion} ({final_conf:.1f}%) [Source: {source}]")
             print(f"🛠️ Reason: {reason}")
-            print(f"📈 Authenticity Score: {auth_score:.2f}")
             if disagreement:
                 print("⚠️ Disagreement detected between modalities.")
             print("=========================\n")
