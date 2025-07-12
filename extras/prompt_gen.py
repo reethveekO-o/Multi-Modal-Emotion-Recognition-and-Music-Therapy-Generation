@@ -1,29 +1,8 @@
-import os
-import logging
-import warnings
-import sys
-# Suppress TensorFlow, xFormers, and general warnings
-os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-logging.getLogger("xformers").setLevel(logging.ERROR)
-warnings.filterwarnings("ignore")
-import time
-import threading
-import torch
-from audiocraft.models import MusicGen
-from audiocraft.data.audio import audio_write
-from stress_final import analyze_video_stress as stress_check
-from emotion_final import run_pipeline as emotion_check
-# Spinner thread function
-spinner_running = True
-def spinner():
-    while spinner_running:
-        for ch in "|/-\\":
-            print(f"\rGenerating... {ch}", end='', flush=True)
-            time.sleep(0.1)
-
-# Prompt builder
+from stress_final import main
+stress_score=main()
+emotion='sadness'
 def generate_music_prompt(stress_score, emotion):
+    # Classify stress level
     if stress_score >= 0.66:
         stress_level = 'high'
         freq = '432'
@@ -34,6 +13,7 @@ def generate_music_prompt(stress_score, emotion):
         stress_level = 'low'
         freq = '640'
 
+    # Emotion category mapping
     emotion_categories = {
         'rage': {'type': 'high_negative', 'synonyms': ['anger', 'irritation']},
         'anger': {'type': 'high_negative', 'synonyms': ['rage', 'annoyance', 'irritation']},
@@ -95,72 +75,12 @@ def generate_music_prompt(stress_score, emotion):
 
     tempo_min, tempo_max = tempo_ranges[emotion_type]
     tempo = int(tempo_min + (tempo_max - tempo_min) * stress_score)
-    duration = float(2 * 240 / tempo)
-    print(f"Calculated music loop duration: {duration:} seconds")
-
     character = therapy_static[emotion_type]
 
-    prompt= (
+    return (
         f"A perfect loop of {character} instrumental, {tempo} BPM, centered around {freq} Hz drone, "
-        "major mode with soft pads, with minimal percussion, long reverb, "
-        "composed to reduce stress."
-        "it fades in and fades out"
-        " It starts and ends the same way."
+        "major mode with soft pads, minimal percussion, long reverb, "
+        "composed to reduce stress and instill positivity"
     )
-    return prompt, duration
-
-# Get user input
-video_path = r"C:\Users\rithvik\OneDrive\Documents\GitHub\Multi-Modal-Emotion-Recognition-and-Music-Therapy-Generation\RecordedSession\output_video.avi" 
-emotion = emotion_check()
-stressscore = stress_check(video_path)
-
-# Generate music prompt
-prompt, dur = generate_music_prompt(stressscore, emotion)
-print(f"\nPrompt:\n{prompt}\n")
-# Load model and generate music
-print("Loading MusicGen model...")
-model = MusicGen.get_pretrained(r"C:\Users\rithvik\OneDrive\Documents\GitHub\Multi-Modal-Emotion-Recognition-and-Music-Therapy-Generation\musicgen")
-model.set_generation_params(duration=dur)
-print("Model loaded.")
-
-# Start spinner thread
-spinner_thread = threading.Thread(target=spinner)
-spinner_thread.start()
-start_time = time.time()
-
-descriptions = [prompt]
-wav = model.generate(descriptions)
-
-# Stop spinner
-spinner_running = False
-spinner_thread.join()
-
-end_time = time.time()
-print(f"\n\n✅ Music generated in {end_time - start_time:.2f} seconds.")
-
-# Create output folder
-output_folder = "generated_audio"
-os.makedirs(output_folder, exist_ok=True)
-
-# Save audio
-for idx, one_wav in enumerate(wav):
-    output_path = os.path.join(output_folder, f'{idx}.wav')
-    audio_write(output_path, one_wav.cpu(), model.sample_rate, strategy="loudness")
-print(f"🎵 Music loop saved as {output_folder}/0.wav")
-
-# Target loop length (in seconds)
-target_duration = dur * 4  # change to what you want
-sample_rate = model.sample_rate
-
-for idx, one_wav in enumerate(wav):
-    # Original duration
-    original_duration = one_wav.shape[-1] / sample_rate
-    loops_needed = int(target_duration / original_duration)
-
-    # Repeat waveform
-    looped_wav = one_wav.repeat(1, loops_needed)
-
-    # Save looped version
-    looped_output_path = os.path.join(output_folder, f'{idx}_looped.wav')
-    audio_write(looped_output_path, looped_wav.cpu(), sample_rate, strategy="loudness")
-    print(f"🔁 Looped and saved as {looped_output_path} ({target_duration}s)")
+prompt=generate_music_prompt(stress_score, emotion)
+print(prompt)
