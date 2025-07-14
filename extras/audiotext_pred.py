@@ -2,6 +2,7 @@
 Enhanced Multimodal Emotion Recognition System - Text Prioritized Version
 Fixes audio dominance issue by giving proper weight to high-confidence text predictions
 """
+#📜 Transcription: This is my final attempt in making the sport work, if it does not work right now I'll be killing myself.
 import argparse
 import numpy as np
 import sounddevice as sd

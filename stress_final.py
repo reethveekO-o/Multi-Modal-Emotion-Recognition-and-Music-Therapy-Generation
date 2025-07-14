@@ -20,7 +20,7 @@ EMOTION_LABELS = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutr
 
 # Emotion to stress mapping
 STRESS_MAP = {
-    'Angry': 0.93, 'Fear': 0.97, 'Sad': 0.92, 'Neutral': 0.39,
+    'Angry': 0.93, 'Fear': 0.97, 'Sad': 0.92, 'Neutral': 0.38,
     'Happy': 0.1, 'Surprise': 0.35, 'Disgust': 0.99
 }
 
@@ -75,24 +75,59 @@ def predict_video_emotions(frames, frame_nums, model):
         preds.append((frame_idx, emotion, confidence, idx))
     return preds
 
-def compute_stress(predictions):
+from collections import defaultdict
+import numpy as np
+
+def label_inertia(labels):
+    """Returns +1 if no changes, -1 if alternates every frame, else in between."""
+    if len(labels) < 2:
+        return 0.0
+    changes = sum(a != b for a, b in zip(labels[:-1], labels[1:]))
+    return 1.0 - 2.0 * changes / (len(labels) - 1)
+
+def compute_stress(predictions, w_var=0.1):
+    """
+    predictions : list[(frame_idx, emotion_label, confidence, class_idx)]
+    returns      : final_stress, avg_stress, variability, inertia
+    """
+
+    # ---------- base stress & variability ----------
+    emotions     = [e for _, e, _, _ in predictions]
+    confidences  = [c for _, _, c, _ in predictions]
+    stress_vals  = [STRESS_MAP[e] * c for e, c in zip(emotions, confidences)]
+
+    avg_stress   = float(np.mean(stress_vals))
+    variability  = float(np.std(stress_vals))
+
+    # ---------- inertia (pair‑wise label correlation) ----------
     indices = [idx for _, _, _, idx in predictions]
-    confidences = [c for _, _, c, _ in predictions]
-    emotions = [e for _, e, _, _ in predictions]
-
-    stress_vals = [STRESS_MAP.get(e, 0.5) * c for e, c in zip(emotions, confidences)]
-    avg_stress = np.mean(stress_vals)
-    variability = np.std(stress_vals)
-
     if len(indices) > 1:
-        inertia = np.corrcoef(indices[:-1], indices[1:])[0, 1]
-        if np.isnan(inertia):
-            inertia = 0.0
+        inertia = label_inertia(indices)
     else:
         inertia = 0.0
 
-    final_stress = avg_stress + 0.1 * variability - 0.05 * inertia
-    final_stress = np.clip(final_stress, 0, 1)
+    # ---------- find the dominant emotion track ----------
+    cum_conf = defaultdict(float)
+    for e, c in zip(emotions, confidences):
+        cum_conf[e] += c
+    dominant_emotion = max(cum_conf, key=cum_conf.get)
+
+    # ---------- inertia contribution as per your rule ----------
+    if inertia < 0:                          # volatile sequence → add as is
+        inertia_effect = -inertia
+    else:                                    # stable sequence → scale by emotion tier
+        if dominant_emotion in ("Happy", "Surprise"):
+            inertia_effect = -0.05 * inertia
+        elif dominant_emotion == "Neutral":
+            inertia_effect =  0.10 * inertia
+        elif dominant_emotion == "Sad":
+            inertia_effect =  0.20 * inertia
+        else:  # Angry, Fear, Disgust
+            inertia_effect =  0.30 * inertia
+
+    # ---------- final stress ----------
+    final_stress = avg_stress + w_var * variability + inertia_effect
+    final_stress = float(np.clip(final_stress, 0.0, 1.0))
 
     return final_stress, avg_stress, variability, inertia
 

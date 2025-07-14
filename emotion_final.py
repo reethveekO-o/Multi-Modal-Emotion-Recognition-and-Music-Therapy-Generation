@@ -376,7 +376,7 @@ def run_pipeline():
             most_common_video_emotion = max(video_counts, key=video_counts.get)
             dominance_ratio = video_counts[most_common_video_emotion] / len(video_probs)
             is_video_dominant = (most_common_video_emotion == video_emotion) and video_conf >= 60 and dominance_ratio >= 0.5
-
+            print(video_counts[most_common_video_emotion])
             if is_video_dominant and video_emotion.lower() != 'neutral':
                 final_emotion = video_emotion.lower()
                 final_conf = video_conf
