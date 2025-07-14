@@ -11,6 +11,7 @@ import numpy as np
 from tensorflow.keras.models import load_model
 import cv2
 from tqdm import tqdm
+from emotion_final import run_pipeline as emotion_check
 
 # Path to your trained video emotion model
 VIDEO_MODEL_PATH = "models/video_model.h5"
@@ -131,23 +132,58 @@ def compute_stress(predictions, w_var=0.1):
 
     return final_stress, avg_stress, variability, inertia
 
-def analyze_video_stress(video_path):
+def analyze_video_stress(video_path, final_emotion=None):
     model = load_model(VIDEO_MODEL_PATH, compile=False)
     frames, frame_nums, raw_frames = load_video_frames(video_path, num_frames=30)
     predictions = predict_video_emotions(frames, frame_nums, model)
 
     final_stress, base, var, inertia = compute_stress(predictions)
+        # === NEW: obtain final emotion from emotion check and adjust stress ===
+    if final_emotion is not None:
+        NEGATIVE_EMOTIONS = {
+            "anger", "angry", "rage", "irritation",
+            "sadness", "sad", "despair", "melancholy",
+            "fear", "panic", "anxiety",
+            "disgust",
+            "shock"   
+        }
+        STRESS_INCREMENT = {
+            # Sadness cluster
+            "sad": 0.3,
+            "sadness": 0.3,
+            "despair": 0.5,
+            "melancholy": 0.2,
 
-    print("\n📊 Frame-by-frame predictions:")
-    for i, (frame_idx, emotion, conf, _) in enumerate(predictions):
-        print(f"Frame {i+1:02d} [Index {frame_idx:04d}]: {emotion} ({conf:.2f})")
+            # Anger cluster
+            "angry": 0.4,
+            "anger": 0.4,
+            "rage": 0.5,
+            "irritation": 0.2,
 
-        frame_disp = raw_frames[i].copy()
-        cv2.putText(frame_disp, f"{emotion} ({conf:.2f})", (10, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        output_dir = "annotated_frames"
-        os.makedirs(output_dir, exist_ok=True)
-        cv2.imwrite(os.path.join(output_dir, f"frame_{i+1:02d}.jpg"), frame_disp)
+            # Fear cluster
+            "fear": 0.4,
+            "panic": 0.5,
+            "anxiety": 0.5,   # high due to persistent stress
+
+            # Disgust
+            "disgust": 0.5,
+
+            # Shock
+            "shock": 0.4
+        }
+
+
+        final_emotion_lower = final_emotion.lower()
+        if final_emotion_lower in NEGATIVE_EMOTIONS:
+            increment = STRESS_INCREMENT.get(final_emotion_lower, 0.05)
+            final_stress = float(np.clip(final_stress + increment, 0.0, 1.0))
+            print(f"⚡ Final stress increased by {increment:.2f} due to detected emotion: {final_emotion}")
+        else:
+            print(f"✅ No negative emotion detected for adjustment. Detected emotion: {final_emotion}")
+    else:
+        print("⚠️ No emotion detected. Skipping emotion-based stress adjustment.")
+
+
 
     print("\n📈 Temporal Features:")
     print(f"- Avg. Emotion-based Stress: {base:.2f}")

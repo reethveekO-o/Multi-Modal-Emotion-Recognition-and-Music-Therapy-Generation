@@ -112,7 +112,7 @@ def generate_music_prompt(stress_score, emotion):
 # Get user input
 video_path = r"C:\Users\rithvik\OneDrive\Documents\GitHub\Multi-Modal-Emotion-Recognition-and-Music-Therapy-Generation\RecordedSession\output_video.avi" 
 emotion = emotion_check()
-stressscore = stress_check(video_path)
+stressscore = stress_check(video_path, final_emotion=emotion)
 
 # Generate music prompt
 prompt, dur = generate_music_prompt(stressscore, emotion)
