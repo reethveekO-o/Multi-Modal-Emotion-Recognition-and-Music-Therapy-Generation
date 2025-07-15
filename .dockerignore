@@ -1,0 +1,11 @@
+venv311/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.git/
+RecordedSession/
+annotated_frames/
+generated_audio/
+musicgen/
