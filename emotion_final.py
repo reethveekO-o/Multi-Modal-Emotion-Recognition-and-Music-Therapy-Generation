@@ -1,6 +1,7 @@
 # =================== FULL MULTIMODAL EMOTION RECOGNITION PIPELINE (AUTH REMOVED) ===================
 
 import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # Disables all GPUs for TensorFlow and Keras
 import logging
 import warnings
 import sys

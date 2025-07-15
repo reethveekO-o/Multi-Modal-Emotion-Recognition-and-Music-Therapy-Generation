@@ -1,5 +1,5 @@
-venv/
-__pycache__/
+venv311/
+_pycache__/
 *.pyc
 *.pyo
 RecordedSession/

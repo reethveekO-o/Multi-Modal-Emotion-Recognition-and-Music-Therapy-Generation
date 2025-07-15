@@ -1,4 +1,5 @@
 import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # Disables all GPUs for TensorFlow and Keras
 import logging
 import warnings
 import sys
@@ -195,5 +196,5 @@ def analyze_video_stress(video_path, final_emotion=None):
 
 # Example usage
 if __name__ == "__main__":
-    video_path = r"C:\Users\rithvik\OneDrive\Documents\GitHub\Multi-Modal-Emotion-Recognition-and-Music-Therapy-Generation\RecordedSession\output_video.avi"
+    video_path = r"C:\Users\vinit\OneDrive\Desktop\College\Research June-July\Multi-Modal-Emotion-Recognition-and-Music-Therapy-Generation\RecordedSession\output_video.avi"
     analyze_video_stress(video_path)

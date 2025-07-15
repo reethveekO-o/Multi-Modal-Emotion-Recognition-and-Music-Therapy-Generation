@@ -1,4 +1,5 @@
 import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # Disables all GPUs for TensorFlow and Keras
 import logging
 import warnings
 import sys
@@ -110,7 +111,7 @@ def generate_music_prompt(stress_score, emotion):
     return prompt, duration
 
 # Get user input
-video_path = r"C:\Users\rithvik\OneDrive\Documents\GitHub\Multi-Modal-Emotion-Recognition-and-Music-Therapy-Generation\RecordedSession\output_video.avi" 
+video_path = r"C:\Users\vinit\OneDrive\Desktop\College\Research June-July\Multi-Modal-Emotion-Recognition-and-Music-Therapy-Generation\RecordedSession\output_video.avi" 
 emotion = emotion_check()
 stressscore = stress_check(video_path, final_emotion=emotion)
 
@@ -119,7 +120,7 @@ prompt, dur = generate_music_prompt(stressscore, emotion)
 print(f"\nPrompt:\n{prompt}\n")
 # Load model and generate music
 print("Loading MusicGen model...")
-model = MusicGen.get_pretrained(r"C:\Users\rithvik\OneDrive\Documents\GitHub\Multi-Modal-Emotion-Recognition-and-Music-Therapy-Generation\musicgen")
+model = MusicGen.get_pretrained(r"C:\Users\vinit\OneDrive\Desktop\College\Research June-July\Multi-Modal-Emotion-Recognition-and-Music-Therapy-Generation\musicgen")
 model.set_generation_params(duration=dur)
 print("Model loaded.")
 
